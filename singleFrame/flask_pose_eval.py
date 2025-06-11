@@ -3,7 +3,7 @@ import cv2
 import gc
 import numpy as np
 import json
-from pose import extract_pose_keypoints, compare_pose_bdp, close_pose_detector
+from SinglePose import extract_pose_keypoints, compare_pose_bdp, close_pose_detector
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
