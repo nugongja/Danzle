@@ -30,6 +30,25 @@ def close_pose_detector():
 
 #################### utils function ########################
 
+# 사용자 포즈 추출 (정규화 포함)
+def extract_pose_keypoints(frame):
+    detector = get_pose_detector()
+    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    with pose_detector_lock:
+        results = detector.process(image_rgb)
+
+    if not results.pose_landmarks:
+        return None
+
+    landmarks = results.pose_landmarks.landmark
+    indices = {
+        "left_shoulder": 11, "right_shoulder": 12, "left_elbow": 13, "right_elbow": 14,
+        "left_wrist": 15, "right_wrist": 16, "left_hip": 23, "right_hip": 24,
+        "left_knee": 25, "right_knee": 26, "left_ankle": 27, "right_ankle": 28
+    }
+    extracted = {name: landmarks[idx] for name, idx in indices.items()}
+    return normalize_pose_keypoints(extracted)
+
 # 두 점 간 벡터 계산
 def get_vector(a, b):
     return np.array([
@@ -67,8 +86,6 @@ def normalize_pose_keypoints(extracted):
 # 방향 및 포즈 정확도 비교
 def compare_pose_bdp(user, ref):
 
-    
-  
     if user is None or ref is None:
         return 0.0
     
