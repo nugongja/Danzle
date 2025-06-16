@@ -51,7 +51,7 @@ Create the following environment variable files in the project root:
 
 Do not commit .env_* files to git. Keep them in .gitignore.
 
-pecific information -> README.md
+pecific information -> [See more](https://github.com/sohee6989/CapstoneProject_Capjjang/blob/Server/README.md)
 
 ---
 
