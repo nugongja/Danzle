@@ -71,5 +71,87 @@ docker-compose up --build
 # 3. Access APIs and services
 - Spring Swagger UI: http://localhost:8080/swagger-ui/index.html
 - Flask Pose API: POST http://localhost:5000/analyze
+```
+---
+
+## Project Structure (Simplified)
+
+Danzle/</br>
+├── flask/                    # Pose evaluation logic (Python)</br>
+│   ├── flask_pose_eval.py</br>
+│   ├── ref_keypoints/       # Reference poses</br>
+│   └── ...</br>
+├── spring/                   # API, logic, DB, GPT (Java)</br>
+│   └── ...</br>
+├── .env_spring               # AWS S3, RDS, GPT keys</br>
+├── .env_flask</br>
+├── docker-compose.yml</br>
+└── README.md</br>
+
+---
+
+### Environment Variable Files
+In this project, environment-specific configuration is split across two files:
+
+- `.env_spring`: For the Spring Boot backend
+- `.env_flask`: For the Flask pose analysis server
+
+These files must be properly configured before running the system via Docker Compose.
+
+#### 1. .env_spring  — Spring Boot Configuration
+```
+# ──────────────── Database (AWS RDS - MySQL) ────────────────
+DB_HOST=<your-db-host>.rds.amazonaws.com
+DB_PORT=3306
+DB_NAME=<your-db-name>
+DB_USERNAME=admin
+DB_PASSWORD=<your-db-password>
+
+# ──────────────── AWS S3 ────────────────
+AWS_S3_BUCKET_NAME=<your-aws-s3-bucket-name>
+
+# ──────────────── OAuth Credentials ────────────────
+NAVER_CLIENT_ID=<your-naver-client-id>
+NAVER_CLIENT_SECRET=<your-naver-client-secret>
+
+GOOGLE_CLIENT_ID=<your-google-client-id>
+GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+GOOGLE_EMAIL=<your-google-email>
+GOOGLE_APP_PASSWORD=<your-google-app-password>
+
+# ──────────────── JWT Security Key ────────────────
+JWT_SECRET=<your-jwt-secret>
+
+# ──────────────── Redis (Docker container name or IP) ────────────────
+REDIS_IP_ADDRESS=<your-redis-container-name>
+
+# ──────────────── Flask API URL (Docker internal) ────────────────
+FLASK_API_BASEURL=http://<flask-container>:5000
+
+# ──────────────── GPT API (OpenAI) ────────────────
+OPENAI_API_KEY=<your-openai-api-key>
+```
+
+#### Notes:
+- LASK_API_BASEURL should match the Flask container name in Docker (e.g., http://flask:5000)
+
+- JWT_SECRET is used for signing and verifying JWT tokens
+
+- REDIS_IP_ADDRESS is typically the container name of the Redis instance
+
+- Never expose secrets or commit .env_spring to version control
 
 
+</br>
+
+#### 2. .env_flask — Flask Server Configuration
+```
+# ──────────────── AWS S3 (for reference or video retrieval if needed) ────────────────
+S3_BUCKET_NAME=<your-s3-bucket-name>
+AWS_ACCESS_KEY_ID=<your-aws-access-key-id>
+AWS_SECRET_ACCESS_KEY=<your-aws-secret-access-key
+```
+#### Notes:
+- If the Flask server reads or writes to S3 (e.g., to access videos), these credentials must be valid
+
+- If Flask does not interact with S3, this file may remain empty or minimal
