@@ -13,7 +13,7 @@ Danzle is an AI-based K-pop dance training system that performs real-time pose e
 - Uploads/downloads videos, audio, and user content via AWS S3
 - Stores metadata (sessions, scores, feedback) in **AWS RDS (MySQL)**
 
--> [See more](docs/backend-spring.md)
+-> [See more](https://github.com/sohee6989/CapstoneProject_Capjjang/blob/Server/backend-spring.md)
 
 ---
 
@@ -22,7 +22,7 @@ Danzle is an AI-based K-pop dance training system that performs real-time pose e
 - Loads reference pose `.json` files stored locally inside the container
 - Returns detailed scoring for each frame using a BDP-based method
 
--> [See more](docs/backend-flask.md)
+-> [See more](https://github.com/sohee6989/CapstoneProject_Capjjang/blob/Server/backend-flask.md)
 
 ---
 
@@ -72,6 +72,7 @@ docker-compose up --build
 - Spring Swagger UI: http://localhost:8080/swagger-ui/index.html
 - Flask Pose API: POST http://localhost:5000/analyze
 ```
+
 ---
 
 ## Project Structure (Simplified)
