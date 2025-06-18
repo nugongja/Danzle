@@ -3,15 +3,20 @@ import cv2
 import gc
 import numpy as np
 import json
-from pose import extract_pose_keypoints, compare_pose_directional, close_pose_detector
+from collections import deque
+from pose import extract_pose_keypoints, compare_pose_bdp, compare_pose_bdp_double_frame, close_pose_detector
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
 
 app = Flask(__name__)
 
-# ────────────────────────
-# S3에서 안무가 JSON 불러오기 (캐시식 구조로 반복 요청 대비)
+# 세션별로 2개 프레임까지 저장하는 큐
+user_pose_queue = {}
+ref_pose_queue = {}
+
+
+################# S3에서 안무가 JSON 불러오기 (캐시식 구조로 반복 요청 대비) ##################
 pose_cache = {}
 
 def get_ref_pose_from_disk(song_title: str, frame_index: int):
@@ -19,7 +24,9 @@ def get_ref_pose_from_disk(song_title: str, frame_index: int):
         file_path = f"./ref_poses/{song_title}_ref_pose_filtered_1sec_normalized.json"
         try:
             with open(file_path, "r") as f:
-                pose_cache[song_title] = json.load(f)
+                pose_dict_raw = json.load(f)
+                pose_dict = {int(frame): keypoints for frame, keypoints in pose_dict_raw.items()}
+                pose_cache[song_title] = pose_dict
         except FileNotFoundError:
             app.logger.error(f"Reference pose file not found for {song_title}")
             return None
@@ -27,12 +34,10 @@ def get_ref_pose_from_disk(song_title: str, frame_index: int):
             app.logger.error(f"Error decoding JSON from {file_path}")
             return None
 
-    ref_data = pose_cache[song_title]
-    ref_pose_by_frame = {entry['frame']: entry['keypoints'] for entry in ref_data}
-    return ref_pose_by_frame.get(frame_index)
+    return pose_cache[song_title].get(frame_index)
 
-# ────────────────────────
-# 실시간 포즈 평가 API
+
+################# 실시간 포즈 평가 API ##################
 @app.route("/analyze", methods=["POST"])
 def pose_eval():
     image = request.files.get("frame")
@@ -62,17 +67,34 @@ def pose_eval():
         "frame_index": frame_index
         })
 
+
     # 전문가 키포인트 불러오기
     expert_kps = get_ref_pose_from_disk(song_title, frame_index)
-
 
     if expert_kps is None:
         app.logger.warning(f"No reference keypoints for frame {frame_index} of {song_title}")
         return jsonify({"error": f"No reference pose for frame {frame_index}"}), 400
 
+
+    # 세션별 큐 초기화 (처음 요청일 경우)
+    if session_id not in user_pose_queue:
+        user_pose_queue[session_id] = deque(maxlen=2)
+        ref_pose_queue[session_id] = deque(maxlen=2)
+
+    # 큐에 현재 프레임 포즈 추가
+    user_pose_queue[session_id].append(user_kps)
+    ref_pose_queue[session_id].append(expert_kps)
+
+
+
     # 사용자와 전문가 키포인트 비교
     try:
-        score = compare_pose_directional(user_kps, expert_kps)
+        if len(user_pose_queue[session_id]) == 2 and len(ref_pose_queue[session_id]) == 2:
+            user_prev, user_now = user_pose_queue[session_id]
+            ref_prev, ref_now = ref_pose_queue[session_id]
+            score = compare_pose_bdp_double_frame(user_now, user_prev, ref_now, ref_prev)
+        else:
+            score = compare_pose_bdp(user_kps, expert_kps)
     except Exception as e:
         app.logger.error(f"Pose comparison failed: {e}")
         return jsonify({"error": "Pose comparison failed"}), 500
@@ -80,6 +102,8 @@ def pose_eval():
     del frame
     del user_kps
 
+
+    # 점수 산출
     if score >= 90:
         feedback = "Perfect"
     elif score >= 80:
@@ -97,9 +121,14 @@ def pose_eval():
         "frame_index": frame_index
     })
 
+
+################# 후처리 ##################
+
 @app.route("/save", methods=["POST"])
 def cleanMemory():
     close_pose_detector()
+    user_pose_queue.clear()
+    ref_pose_queue.clear()
     collected = gc.collect()
     app.logger.info(f"Detector closed, gc.collect() called. Objects collected: {collected}")
     return jsonify({"status": "closed", "objects_collected": collected})
