@@ -150,6 +150,6 @@ def compare_pose_directional(user, ref):
     # 디버깅 출력
     logging.debug(f"direction: {direction_score:.2f}")
     for part in body_parts:
-        logging.debug(f"{part}: dist={breakdown[part]:.2f}, angle={angle_scores[part]:.2f}", flush=True)
+        logging.debug(f"{part}: dist={breakdown[part]:.2f}, angle={angle_scores[part]:.2f}")
 
     return round(total_score, 2)
